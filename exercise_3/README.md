@@ -25,7 +25,7 @@ Dự án này thực hiện các công việc tự động sau:
 │   ├── service-user/           # Code & Dockerfile của User Service
 │   └── service-product/        # Code & Dockerfile của Product Service
 │
-├── Jenkinsfile                 # Kịch bản Pipeline CI/CD (Nằm ngoài cùng hoặc trong folder project)
+├── Jenkinsfile                 # Pipeline CI/CD
 └── README.md                   # Hướng dẫn sử dụng
 ```
 ## Hướng dẫn Cài đặt & Chạy
