@@ -13,7 +13,7 @@ Dự án này thực hiện các công việc tự động sau:
 * **Git** được cài đặt.
 
 ## Cấu trúc dự án
-Đảm bảo cấu trúc thư mục của bạn giống như sau:
+Đảm bảo cấu trúc thư mục giống như sau:
 
 ```text
 .
@@ -51,7 +51,7 @@ Dự án này thực hiện các công việc tự động sau:
     docker exec -it jenkins-server cat /var/jenkins_home/secrets/initialAdminPassword
     ```
 2.  **Đăng nhập:** Truy cập `http://localhost:8081`, nhập mật khẩu và chọn **"Install Suggested Plugins"**.
-3.  **Tạo tài khoản Admin:** Điền thông tin user/pass theo ý bạn (Ví dụ: `admin`/`123456`).
+3.  **Tạo tài khoản Admin:** Điền thông tin user/pass (Ví dụ: `admin`/`123456`).
 4.  **Cài đặt thêm Plugins:**
     * Vào **Manage Jenkins** -> **Plugins** -> **Available plugins**.
     * Tìm và cài 2 plugin:
@@ -86,7 +86,7 @@ Dự án này thực hiện các công việc tự động sau:
 3.  Trong phần cấu hình Pipeline:
     * **Definition:** Chọn `Pipeline script from SCM`.
     * **SCM:** Chọn `Git`.
-    * **Repository URL:** Điền link GitHub chứa code của bạn.
+    * **Repository URL:** Điền link GitHub chứa code.
     * **Branch Specifier:** `*/main`.
     * **Script Path:** `Jenkinsfile` (Hoặc đường dẫn tới file Jenkinsfile nếu bạn để trong thư mục con).
 4.  Bấm **Save**.
@@ -96,7 +96,7 @@ Dự án này thực hiện các công việc tự động sau:
 
 ## Kết quả
 
-Sau khi Pipeline chạy thành công (màu xanh lá), bạn có thể kiểm tra các dịch vụ tại:
+Sau khi Pipeline chạy thành công (màu xanh lá), có thể kiểm tra các dịch vụ tại:
 
 | Dịch vụ | URL Local | Trạng thái mong đợi |
 | :--- | :--- | :--- |
