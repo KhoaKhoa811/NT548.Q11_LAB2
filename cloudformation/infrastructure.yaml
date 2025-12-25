@@ -1,0 +1,279 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Complete infrastructure matching Terraform configuration - VPC, Security Groups, and EC2 instances
+
+Parameters:
+  VpcCIDR:
+    Type: String
+    Default: 10.0.0.0/16
+    Description: CIDR block for VPC
+
+  PublicSubnetCIDR:
+    Type: String
+    Default: 10.0.1.0/24
+    Description: CIDR block for public subnet
+
+  PrivateSubnetCIDR:
+    Type: String
+    Default: 10.0.2.0/24
+    Description: CIDR block for private subnet
+
+  AvailabilityZone:
+    Type: String
+    Default: us-east-1a
+    Description: Availability Zone for subnets
+
+  MyPublicIP:
+    Type: String
+    Description: Your public IP address in CIDR notation (e.g., 1.2.3.4/32) for SSH access
+
+  KeyPairName:
+    Type: String
+    Description: Name of an existing EC2 KeyPair for SSH access
+
+  InstanceType:
+    Type: String
+    Default: t3.micro
+    Description: EC2 instance type
+
+  AmiId:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2
+    Description: SSM Parameter for Amazon Linux 2 AMI
+
+Resources:
+  # VPC Module Resources
+
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCIDR
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      Tags:
+        - Key: Name
+          Value: my-vpc
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: my-igw
+
+  AttachIGW:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+
+  PublicSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref PublicSubnetCIDR
+      AvailabilityZone: !Ref AvailabilityZone
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: public-subnet
+
+  PrivateSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref PrivateSubnetCIDR
+      AvailabilityZone: !Ref AvailabilityZone
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: private-subnet
+
+  NatEIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+
+  NatGateway:
+    Type: AWS::EC2::NatGateway
+    DependsOn: AttachIGW
+    Properties:
+      AllocationId: !GetAtt NatEIP.AllocationId
+      SubnetId: !Ref PublicSubnet
+      Tags:
+        - Key: Name
+          Value: my-nat-gw
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: public-rt
+
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: AttachIGW
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet
+      RouteTableId: !Ref PublicRouteTable
+
+  PrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: private-rt
+
+  PrivateRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway
+
+  PrivateSubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet
+      RouteTableId: !Ref PrivateRouteTable
+
+  # Security Groups Module Resources
+
+  PublicSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: public-sg
+      GroupDescription: Allow SSH from my IP
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Ref MyPublicIP
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: public-sg
+
+  PrivateSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: private-sg
+      GroupDescription: Allow SSH from Public Instance only
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          SourceSecurityGroupId: !Ref PublicSecurityGroup
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: private-sg
+
+  # EC2 Module Resources
+
+  PublicBastionHost:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref AmiId
+      InstanceType: !Ref InstanceType
+      SubnetId: !Ref PublicSubnet
+      SecurityGroupIds:
+        - !Ref PublicSecurityGroup
+      KeyName: !Ref KeyPairName
+      Tags:
+        - Key: Name
+          Value: Public-Bastion-Host
+
+  PrivateAppServer:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref AmiId
+      InstanceType: !Ref InstanceType
+      SubnetId: !Ref PrivateSubnet
+      SecurityGroupIds:
+        - !Ref PrivateSecurityGroup
+      KeyName: !Ref KeyPairName
+      Tags:
+        - Key: Name
+          Value: Private-App-Server
+
+Outputs:
+  # VPC Outputs
+  VpcId:
+    Description: The ID of the VPC
+    Value: !Ref VPC
+    Export:
+      Name: !Sub ${AWS::StackName}-VpcId
+
+  PublicSubnetId:
+    Description: The ID of the public subnet
+    Value: !Ref PublicSubnet
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicSubnetId
+
+  PrivateSubnetId:
+    Description: The ID of the private subnet
+    Value: !Ref PrivateSubnet
+    Export:
+      Name: !Sub ${AWS::StackName}-PrivateSubnetId
+
+  InternetGatewayId:
+    Description: The ID of the Internet Gateway
+    Value: !Ref InternetGateway
+    Export:
+      Name: !Sub ${AWS::StackName}-IGWId
+
+  NatGatewayId:
+    Description: The ID of the NAT Gateway
+    Value: !Ref NatGateway
+    Export:
+      Name: !Sub ${AWS::StackName}-NatGatewayId
+
+  # Security Group Outputs
+  PublicSecurityGroupId:
+    Description: The ID of the public security group
+    Value: !Ref PublicSecurityGroup
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicSGId
+
+  PrivateSecurityGroupId:
+    Description: The ID of the private security group
+    Value: !Ref PrivateSecurityGroup
+    Export:
+      Name: !Sub ${AWS::StackName}-PrivateSGId
+
+  # EC2 Outputs
+  PublicInstanceIP:
+    Description: Public IP address of the bastion host
+    Value: !GetAtt PublicBastionHost.PublicIp
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicIP
+
+  PrivateInstanceIP:
+    Description: Private IP address of the app server
+    Value: !GetAtt PrivateAppServer.PrivateIp
+    Export:
+      Name: !Sub ${AWS::StackName}-PrivateIP
+
+  ConnectCommand:
+    Description: SSH command to connect to bastion host
+    Value: !Sub ssh -i ${KeyPairName}.pem ec2-user@${PublicBastionHost.PublicIp}
+
+  AppServerPrivateIP:
+    Description: Private IP of the app server (same as PrivateInstanceIP for consistency with Terraform)
+    Value: !GetAtt PrivateAppServer.PrivateIp

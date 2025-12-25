@@ -1,0 +1,28 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      python: 3.11
+    commands:
+      - echo "Installing testing tools..."
+      - pip install cfn-lint taskcat
+  pre_build:
+    commands:
+      - echo "Checking versions..."
+      - cfn-lint --version
+      - taskcat --version
+  build:
+    commands:
+      - echo "Starting cfn-lint validation..."
+      - cfn-lint cloudformation/infrastructure.yaml
+      - echo "cfn-lint passed!"
+      
+     
+      - echo "Starting taskcat test..."
+      - taskcat test run
+
+artifacts:
+  files:
+    - cloudformation/**/*
+    - parameters.json

@@ -1,0 +1,12 @@
+project:
+  name: lab2-validation
+  regions:
+    - us-east-1
+
+tests:
+  default:
+    template: cloudformation/infrastructure.yaml
+    parameters:
+      KeyPairName: ""
+      MyPublicIP: ""
+      AvailabilityZone: "us-east-1a"
