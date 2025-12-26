@@ -1,11 +1,10 @@
 terraform {
 
-  # Backend commented out - bucket was destroyed
-  # backend "s3" {
-  #   bucket = "vprofileactions0811"
-  #   key    = "terraform.tfstate"
-  #   region = "us-east-1"
-  # }
+  backend "s3" { # Use S3 to persist state across GitHub Action runs
+    bucket = "vprofileactions0811" # Ensure this bucket exists in S3
+    key    = "terraform.tfstate" # State file path in the bucket
+    region = "us-east-1" # Region for the S3 bucket
+  }
 
   required_providers {
     aws = {
