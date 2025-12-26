@@ -1,0 +1,16 @@
+directory:
+  - exercise_1/
+soft-fail: true
+compact: true
+download-external-modules: true
+evaluate-variables: true
+skip-check:
+  - CKV_GHA_7
+  - CKV_AWS_39
+  - CKV_AWS_38
+  - CKV_AWS_37
+  - CKV_AWS_58
+  - CKV_AWS_130
+  - CKV_AWS_23
+  - CKV_AWS_260
+
